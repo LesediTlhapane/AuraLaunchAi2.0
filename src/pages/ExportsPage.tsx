@@ -4,11 +4,12 @@ import { useToast } from '../context/ToastContext';
 import { Download, Copy, Check, Bot, Code2, FileText, Sparkles, FolderKanban } from 'lucide-react';
 
 export const ExportsPage: React.FC = () => {
-  const { projects, activeProjectId, setActiveProjectId } = useProjects();
+  const { projects, activeProjectId } = useProjects();
   const { addToast } = useToast();
   const [copiedType, setCopiedType] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(activeProjectId || projects[0]?.id || null);
 
-  const selectedProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+  const selectedProject = projects.find((p) => p.id === (selectedProjectId || activeProjectId)) || projects[0];
 
   const handleCopy = (content: string, type: string) => {
     navigator.clipboard.writeText(content);
@@ -65,7 +66,7 @@ export const ExportsPage: React.FC = () => {
           <FolderKanban className="w-4 h-4 text-[#052b66] dark:text-blue-400" />
           <select
             value={selectedProject.id}
-            onChange={(e) => setActiveProjectId(e.target.value)}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
             className="bg-transparent text-xs font-bold text-slate-900 dark:text-white outline-none"
           >
             {projects.map((p) => (

@@ -1,21 +1,28 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const getEnvVar = (keys: string[]): string | undefined => {
-  for (const key of keys) {
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key];
-    }
-    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
-      return (import.meta as any).env[key];
-    }
+// Read Vite environment variables directly with fallback to process.env or NEXT_PUBLIC prefixes
+const getEnv = (key: string, fallbackKey?: string): string => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (import.meta.env[key]) return import.meta.env[key];
+    if (fallbackKey && import.meta.env[fallbackKey]) return import.meta.env[fallbackKey];
   }
-  return undefined;
+  if (typeof process !== 'undefined' && process.env) {
+    if (process.env[key]) return process.env[key];
+    if (fallbackKey && process.env[fallbackKey]) return process.env[fallbackKey];
+  }
+  return '';
 };
 
-const supabaseUrl = getEnvVar(['NEXT_PUBLIC_SUPABASE_URL', 'VITE_SUPABASE_URL']);
-const supabaseAnonKey = getEnvVar(['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY']);
+export const supabaseUrl = getEnv('VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+export const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey && supabaseUrl.trim() !== '' && supabaseAnonKey.trim() !== '');
+export const isSupabaseConfigured = Boolean(
+  supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl.trim() !== '' &&
+  supabaseAnonKey.trim() !== '' &&
+  !supabaseUrl.includes('your-supabase-url')
+);
 
 let supabaseInstance: SupabaseClient | null = null;
 
@@ -29,6 +36,7 @@ export const getSupabaseClient = (): SupabaseClient | null => {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
+          detectSessionInUrl: true,
         },
       });
     } catch (err) {
@@ -38,3 +46,6 @@ export const getSupabaseClient = (): SupabaseClient | null => {
   }
   return supabaseInstance;
 };
+
+export const supabase = getSupabaseClient();
+

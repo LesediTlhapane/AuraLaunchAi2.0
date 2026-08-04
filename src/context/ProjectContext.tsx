@@ -6,6 +6,8 @@ import { useToast } from './ToastContext';
 
 interface ProjectContextType {
   projects: Project[];
+  isLoadingProjects: boolean;
+  loadProjectsError: string | null;
   activeProjectId: string | null;
   activeProject: Project | null;
   activeTab: ActiveTab;
@@ -40,8 +42,15 @@ const THEME_STORAGE_KEY = 'aura_theme_dark';
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>('proj_koa_01');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
+  const [loadProjectsError, setLoadProjectsError] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeTab, setActiveTabState] = useState<ActiveTab>('dashboard');
+
+  const setActiveTab = (tab: ActiveTab) => {
+    setActiveTabState(tab);
+    setActiveProjectId(null);
+  };
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(initialActivityLogs);
@@ -67,19 +76,28 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Load Projects from Supabase or LocalStorage
   useEffect(() => {
     const loadProjects = async () => {
+      setIsLoadingProjects(true);
+      setLoadProjectsError(null);
+
       const supabase = getSupabaseClient();
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data, error } = await supabase.from('projects').select('*');
-          if (!error && data && data.length > 0) {
+          const { data, error } = await supabase.from('projects').select('*').order('createdAt', { ascending: false });
+          if (error) {
+            console.warn('Supabase projects query error:', error.message);
+            setLoadProjectsError(error.message);
+          } else if (data && data.length > 0) {
             setProjects(data as Project[]);
+            setIsLoadingProjects(false);
             return;
           }
-        } catch {
-          // fallback to initial local
+        } catch (err: any) {
+          console.warn('Supabase projects exception:', err);
+          setLoadProjectsError(err.message || 'Failed to fetch projects from Supabase');
         }
       }
 
+      // Fallback to localStorage or mockData
       const stored = localStorage.getItem(PROJECTS_STORAGE_KEY);
       if (stored) {
         try {
@@ -91,10 +109,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else {
         setProjects(initialProjects);
       }
+      setIsLoadingProjects(false);
     };
 
     loadProjects();
   }, []);
+
 
   // Save to local storage on change
   useEffect(() => {
@@ -266,19 +286,31 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return newProj;
   };
 
-  const updateProject = (id: string, updates: Partial<Project>) => {
+  const updateProject = async (id: string, updates: Partial<Project>) => {
+    let updatedProj: Project | null = null;
     setProjects((prev) =>
       prev.map((p) => {
         if (p.id === id) {
-          return {
+          updatedProj = {
             ...p,
             ...updates,
             updatedAt: new Date().toISOString(),
           };
+          return updatedProj;
         }
         return p;
       })
     );
+
+    const supabase = getSupabaseClient();
+    if (isSupabaseConfigured && supabase && updatedProj) {
+      try {
+        await supabase.from('projects').update(updatedProj).eq('id', id);
+      } catch (err) {
+        console.warn('Failed to update project in Supabase:', err);
+      }
+    }
+
     addToast('info', 'Project Updated', 'Changes saved successfully.');
   };
 
@@ -325,6 +357,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     <ProjectContext.Provider
       value={{
         projects,
+        isLoadingProjects,
+        loadProjectsError,
         activeProjectId,
         activeProject,
         activeTab,
