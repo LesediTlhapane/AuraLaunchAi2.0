@@ -122,48 +122,62 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {projects.slice(0, 4).map((p) => (
-                <div
-                  key={p.id}
-                  className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <img
-                      src={p.branding.logoUrl || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=100'}
-                      alt={p.businessName}
-                      className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                        {p.businessName}
-                      </h3>
-                      <p className="text-xs text-slate-400 truncate">{p.businessInfo.instagramHandle}</p>
+              {projects.length === 0 ? (
+                <div className="py-8 text-center bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    No projects created yet.
+                  </p>
+                  <button
+                    onClick={() => setIsNewProjectModalOpen(true)}
+                    className="mt-2 text-xs font-bold text-[#052b66] dark:text-[#45cc42] hover:underline"
+                  >
+                    + Create Your First Project
+                  </button>
+                </div>
+              ) : (
+                projects.slice(0, 4).map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <img
+                        src={p.branding?.logoUrl || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=100'}
+                        alt={p.businessName}
+                        className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {p.businessName}
+                        </h3>
+                        <p className="text-xs text-slate-400 truncate">{p.businessInfo?.instagramHandle || p.instagramUrl}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                          p.status === 'ready' || p.status === 'exported'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+
+                      <button
+                        onClick={() => {
+                          setActiveProjectId(p.id);
+                          setActiveTab('projects');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#052b66] text-white font-semibold text-xs hover:bg-[#0a3d8f] transition"
+                      >
+                        Open
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                        p.status === 'ready' || p.status === 'exported'
-                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                          : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
-                      }`}
-                    >
-                      {p.status}
-                    </span>
-
-                    <button
-                      onClick={() => {
-                        setActiveProjectId(p.id);
-                        setActiveTab('projects');
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-[#052b66] text-white font-semibold text-xs hover:bg-[#0a3d8f] transition"
-                    >
-                      Open
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

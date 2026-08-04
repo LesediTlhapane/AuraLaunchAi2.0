@@ -13,12 +13,22 @@ import {
   Trash2, 
   Star,
   Layers,
-  ArrowUpDown
+  ArrowUpDown,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { ConfirmModal } from '../components/common/ConfirmModal';
 
 export const ProjectsPage: React.FC = () => {
-  const { projects, setActiveProjectId, setIsNewProjectModalOpen, deleteProject } = useProjects();
+  const {
+    projects,
+    isLoadingProjects,
+    loadProjectsError,
+    fetchProjects,
+    setActiveProjectId,
+    setIsNewProjectModalOpen,
+    deleteProject
+  } = useProjects();
 
   const [viewStyle, setViewStyle] = useState<'table' | 'cards'>('cards');
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,13 +65,22 @@ export const ProjectsPage: React.FC = () => {
           </h1>
         </div>
 
-        <button
-          onClick={() => setIsNewProjectModalOpen(true)}
-          className="px-5 py-2.5 rounded-xl bg-[#052b66] dark:bg-blue-600 text-white font-bold text-xs shadow-lg hover:bg-[#0a3d8f] transition flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4 text-[#45cc42]" />
-          <span>New Project</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchProjects()}
+            title="Refresh projects from Supabase"
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingProjects ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => setIsNewProjectModalOpen(true)}
+            className="px-5 py-2.5 rounded-xl bg-[#052b66] dark:bg-blue-600 text-white font-bold text-xs shadow-lg hover:bg-[#0a3d8f] transition flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4 text-[#45cc42]" />
+            <span>New Project</span>
+          </button>
+        </div>
       </div>
 
       {/* Search, Filter & View Controls */}
@@ -135,8 +154,42 @@ export const ProjectsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Cards View */}
-      {viewStyle === 'cards' ? (
+      {/* Loading Spinner */}
+      {isLoadingProjects ? (
+        <div className="flex flex-col items-center justify-center py-24 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 shadow-xs space-y-3">
+          <Loader2 className="w-10 h-10 text-[#052b66] dark:text-[#45cc42] animate-spin" />
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Loading projects from Supabase...
+          </p>
+        </div>
+      ) : projects.length === 0 || filtered.length === 0 ? (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center py-20 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-xs space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-[#052b66] dark:text-[#45cc42]">
+            <FolderKanban className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No projects yet.</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md">
+              Create your first AI Transformation Project.
+            </p>
+          </div>
+
+          {loadProjectsError && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 rounded-xl text-xs max-w-md border border-amber-200 dark:border-amber-800">
+              <span className="font-semibold">Supabase Status: </span> {loadProjectsError}
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsNewProjectModalOpen(true)}
+            className="px-6 py-3 rounded-xl bg-[#052b66] dark:bg-blue-600 text-white font-bold text-xs shadow-lg hover:bg-[#0a3d8f] transition flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4 text-[#45cc42]" />
+            <span>Create Your First Project</span>
+          </button>
+        </div>
+      ) : viewStyle === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((project) => (
             <div
@@ -147,7 +200,7 @@ export const ProjectsPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <img
-                      src={project.branding.logoUrl || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=100'}
+                      src={project.branding?.logoUrl || 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=100'}
                       alt={project.businessName}
                       className="w-12 h-12 rounded-xl object-cover ring-1 ring-slate-200"
                     />
@@ -155,7 +208,7 @@ export const ProjectsPage: React.FC = () => {
                       <h3 className="font-bold text-base text-slate-900 dark:text-white leading-snug">
                         {project.businessName}
                       </h3>
-                      <p className="text-xs text-slate-400">{project.businessInfo.instagramHandle}</p>
+                      <p className="text-xs text-slate-400">{project.businessInfo?.instagramHandle || project.instagramUrl}</p>
                     </div>
                   </div>
 
@@ -196,14 +249,16 @@ export const ProjectsPage: React.FC = () => {
                 </button>
 
                 <div className="flex items-center gap-2">
-                  <a
-                    href={project.instagramUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+                  {project.instagramUrl && (
+                    <a
+                      href={project.instagramUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
 
                   <button
                     onClick={() => setActiveProjectId(project.id)}
@@ -239,7 +294,7 @@ export const ProjectsPage: React.FC = () => {
                       {project.businessName}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-500">
-                      {project.businessInfo.instagramHandle}
+                      {project.businessInfo?.instagramHandle || project.instagramUrl}
                     </td>
                     <td className="py-3.5 px-4">{project.industry}</td>
                     <td className="py-3.5 px-4">
@@ -284,3 +339,4 @@ export const ProjectsPage: React.FC = () => {
     </div>
   );
 };
+

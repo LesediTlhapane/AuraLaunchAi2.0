@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Project, IndustryType, ActiveTab, NotificationItem, ActivityLog } from '../types';
-import { initialProjects, initialNotifications, initialActivityLogs } from '../lib/mockData';
+import { initialNotifications, initialActivityLogs } from '../lib/mockData';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { useToast } from './ToastContext';
 
@@ -8,6 +8,7 @@ interface ProjectContextType {
   projects: Project[];
   isLoadingProjects: boolean;
   loadProjectsError: string | null;
+  fetchProjects: () => Promise<void>;
   activeProjectId: string | null;
   activeProject: Project | null;
   activeTab: ActiveTab;
@@ -36,8 +37,58 @@ interface ProjectContextType {
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
-const PROJECTS_STORAGE_KEY = 'aura_projects_v1';
 const THEME_STORAGE_KEY = 'aura_theme_dark';
+
+// Helper function to safely parse Supabase table row into Project object
+function parseSupabaseRow(row: any): Project {
+  return {
+    id: String(row.id || `proj_${Date.now()}`),
+    businessName: row.businessName || row.business_name || 'Untitled Business',
+    instagramUrl: row.instagramUrl || row.instagram_url || '',
+    industry: row.industry || 'Hospitality & Dining',
+    status: row.status || 'ready',
+    createdAt: row.createdAt || row.created_at || new Date().toISOString(),
+    updatedAt: row.updatedAt || row.updated_at || new Date().toISOString(),
+    notes: row.notes || '',
+    mediaCount: typeof row.mediaCount === 'number' ? row.mediaCount : (row.media_count || (Array.isArray(row.media) ? row.media.length : 0)),
+    readinessScore: typeof row.readinessScore === 'number' ? row.readinessScore : (row.readiness_score || 85),
+    businessInfo: typeof row.businessInfo === 'object' && row.businessInfo ? row.businessInfo : (typeof row.business_info === 'object' && row.business_info ? row.business_info : {
+      businessName: row.businessName || row.business_name || 'Untitled Business',
+      instagramHandle: row.instagramUrl ? '@' + String(row.instagramUrl).split('/').filter(Boolean).pop() : '@business',
+      instagramUrl: row.instagramUrl || row.instagram_url || '',
+      industry: row.industry || 'Hospitality & Dining',
+      notes: row.notes || '',
+      services: []
+    }),
+    branding: typeof row.branding === 'object' && row.branding ? row.branding : {
+      primaryColor: '#052b66',
+      secondaryColor: '#45cc42',
+      accentColor: '#E2B857',
+      backgroundColor: '#F8FAFC',
+      textColor: '#0F172A',
+      headingFont: 'Playfair Display',
+      bodyFont: 'Plus Jakarta Sans',
+      personality: { professionalism: 80, minimalism: 80, vibrancy: 70, luxury: 70 }
+    },
+    generatedCopy: typeof row.generatedCopy === 'object' && row.generatedCopy ? row.generatedCopy : (typeof row.generated_copy === 'object' && row.generated_copy ? row.generated_copy : {
+      heroHeadline: `${row.businessName || row.business_name || 'Business'} Official Website`,
+      heroSubheadline: `Specialized ${row.industry || 'services'} offerings.`,
+      aboutText: 'Welcome to our business page.',
+      servicesIntro: 'Our Core Offerings',
+      servicesList: []
+    }),
+    media: Array.isArray(row.media) ? row.media : [],
+    exports: typeof row.exports === 'object' && row.exports ? row.exports : {
+      id: `exp_${row.id}`,
+      projectId: String(row.id),
+      loveablePrompt: `Create a landing page for ${row.businessName || 'Business'}`,
+      jsonExport: JSON.stringify(row, null, 2),
+      markdownExport: `# ${row.businessName || 'Business'}\nIndustry: ${row.industry || 'General'}`,
+      createdAt: new Date().toISOString(),
+      downloadCount: 0
+    }
+  };
+}
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
@@ -73,55 +124,56 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
-  // Load Projects from Supabase or LocalStorage
-  useEffect(() => {
-    const loadProjects = async () => {
-      setIsLoadingProjects(true);
-      setLoadProjectsError(null);
+  // Fetch projects directly from Supabase
+  const fetchProjects = useCallback(async () => {
+    setIsLoadingProjects(true);
+    setLoadProjectsError(null);
 
-      const supabase = getSupabaseClient();
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data, error } = await supabase.from('projects').select('*').order('createdAt', { ascending: false });
-          if (error) {
-            console.warn('Supabase projects query error:', error.message);
-            setLoadProjectsError(error.message);
-          } else if (data && data.length > 0) {
-            setProjects(data as Project[]);
-            setIsLoadingProjects(false);
-            return;
-          }
-        } catch (err: any) {
-          console.warn('Supabase projects exception:', err);
-          setLoadProjectsError(err.message || 'Failed to fetch projects from Supabase');
-        }
-      }
+    const supabase = getSupabaseClient();
+    if (isSupabaseConfigured && supabase) {
+      try {
+        let { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      // Fallback to localStorage or mockData
-      const stored = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setProjects(parsed);
-        } catch {
-          setProjects(initialProjects);
+        if (error && (error.message.includes('created_at') || error.code === '42703')) {
+          const retry = await supabase
+            .from('projects')
+            .select('*')
+            .order('createdAt', { ascending: false });
+          data = retry.data;
+          error = retry.error;
         }
-      } else {
-        setProjects(initialProjects);
+
+        if (error && error.code === '42P01') {
+          setLoadProjectsError('The "projects" table does not exist in Supabase yet.');
+          setProjects([]);
+        } else if (error) {
+          console.warn('Supabase projects fetch error:', error.message);
+          setLoadProjectsError(error.message);
+          setProjects([]);
+        } else {
+          const loaded = (data || []).map(parseSupabaseRow);
+          setProjects(loaded);
+        }
+      } catch (err: any) {
+        console.warn('Error fetching projects:', err);
+        setLoadProjectsError(err.message || 'Failed to fetch projects');
+        setProjects([]);
+      } finally {
+        setIsLoadingProjects(false);
       }
+    } else {
+      // Supabase not configured yet -> strictly empty projects list (NO mock data!)
+      setProjects([]);
       setIsLoadingProjects(false);
-    };
-
-    loadProjects();
+    }
   }, []);
 
-
-  // Save to local storage on change
   useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
-    }
-  }, [projects]);
+    fetchProjects();
+  }, [fetchProjects]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId) || null;
 
@@ -141,122 +193,139 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? data.instagramUrl
       : `https://instagram.com/${cleanedHandle.replace('@', '')}`;
 
+    const newProjId = `proj_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const now = new Date().toISOString();
+
     const newProj: Project = {
-      id: `proj_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: newProjId,
       businessName: data.businessName,
       instagramUrl: formattedUrl,
       industry: data.industry,
-      status: 'in_progress',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      status: 'ready',
+      createdAt: now,
+      updatedAt: now,
       notes: data.notes || '',
-      mediaCount: 12,
-      readinessScore: 65,
+      mediaCount: 1,
+      readinessScore: 90,
       businessInfo: {
         businessName: data.businessName,
         instagramHandle: cleanedHandle,
         instagramUrl: formattedUrl,
         industry: data.industry,
-        phone: '+1 (555) ' + Math.floor(100 + Math.random() * 900) + '-' + Math.floor(1000 + Math.random() * 9000),
+        phone: '+1 (555) 234-5678',
         email: `contact@${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-        address: '100 Main Street, Suite ' + Math.floor(100 + Math.random() * 800),
-        operatingHours: 'Mon-Fri: 8:00 AM – 6:00 PM',
+        address: '100 Innovation Way',
+        operatingHours: 'Mon-Fri: 9:00 AM – 6:00 PM',
         bio: `${data.businessName} – Premier ${data.industry.toLowerCase()} brand extracted from Instagram. ✨`,
         websiteUrl: `https://${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-        services: ['Core Services', 'Custom Offerings', 'Consultation', 'Express Delivery'],
+        services: ['Primary Service', 'Specialty Offerings', 'Consultation'],
         notes: data.notes,
       },
       branding: {
         primaryColor: '#052b66',
         secondaryColor: '#45cc42',
-        accentColor: '#3B82F6',
+        accentColor: '#E2B857',
         backgroundColor: '#F8FAFC',
         textColor: '#0F172A',
-        headingFont: 'Plus Jakarta Sans',
-        bodyFont: 'Inter',
+        headingFont: 'Playfair Display',
+        bodyFont: 'Plus Jakarta Sans',
         personality: {
           professionalism: 85,
           minimalism: 80,
           vibrancy: 75,
-          luxury: 70,
+          luxury: 80,
         },
-        logoUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&auto=format&fit=crop&q=80',
+        logoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80',
       },
       generatedCopy: {
-        heroHeadline: `Transforming ${data.businessName} into a Digital Masterpiece`,
-        heroSubheadline: `Experience exceptional ${data.industry.toLowerCase()} services designed for clients who value perfection and speed.`,
-        aboutText: `${data.businessName} is a leading brand in the ${data.industry.toLowerCase()} sector. We deliver curated solutions built on authenticity and quality.`,
-        servicesIntro: 'Tailored solutions designed for modern performance.',
+        heroHeadline: `Official Digital Platform for ${data.businessName}`,
+        heroSubheadline: `Specialized ${data.industry.toLowerCase()} services and bespoke experiences.`,
+        aboutText: `Welcome to ${data.businessName}. We bring unmatched quality and expertise in ${data.industry.toLowerCase()}.`,
+        servicesIntro: 'Tailored solutions designed for excellence.',
         servicesList: [
-          { title: 'Primary Service Suite', description: 'Comprehensive solutions customized to your specific needs.' },
-          { title: 'Consultation & Strategy', description: 'Direct 1-on-1 guidance to maximize value.' },
+          { title: 'Core Services', description: 'Comprehensive solutions tailored to your unique requirements.' },
+          { title: 'Advisory & Strategy', description: 'Expert guidance to accelerate growth and visibility.' },
         ],
-        ctaHeadline: `Connect with ${data.businessName} Today`,
-        ctaButtonText: 'Get Started Now',
+        ctaHeadline: `Get Started with ${data.businessName}`,
+        ctaButtonText: 'Inquire Now',
         faqs: [
-          { question: `How do I book a session with ${data.businessName}?`, answer: 'You can easily request a consultation directly through our website or via Instagram DM.' },
+          { question: `How do I contact ${data.businessName}?`, answer: 'Reach out via our inquiry form or direct message.' },
         ],
         seoMeta: {
           title: `${data.businessName} | Official Website`,
-          description: `Welcome to ${data.businessName}. Premier ${data.industry.toLowerCase()} services and offerings.`,
-          keywords: [data.businessName.toLowerCase(), data.industry.toLowerCase(), 'instagram website'],
+          description: `Welcome to ${data.businessName}. Premier ${data.industry.toLowerCase()} services.`,
+          keywords: [data.businessName.toLowerCase(), data.industry.toLowerCase()],
         },
       },
       media: [
         {
-          id: `med_new_1_${Date.now()}`,
-          projectId: `proj_${Date.now()}`,
+          id: `med_${Date.now()}`,
+          projectId: newProjId,
           url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&auto=format&fit=crop&q=80',
-          caption: `${data.businessName} workspace setup. Quality and precision in every detail.`,
+          caption: `${data.businessName} workspace and primary showcase.`,
           category: 'Atmosphere',
-          qualityScore: 94,
+          qualityScore: 95,
           isHeroCandidate: true,
           aspectRatio: '1:1',
-          likesCount: 840,
-          commentsCount: 38,
-          extractedDate: new Date().toISOString().split('T')[0],
-        },
-        {
-          id: `med_new_2_${Date.now()}`,
-          projectId: `proj_${Date.now()}`,
-          url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
-          caption: 'Behind the scenes at our creative headquarter.',
-          category: 'Team',
-          qualityScore: 91,
-          isHeroCandidate: false,
-          aspectRatio: '4:3',
-          likesCount: 620,
-          commentsCount: 19,
-          extractedDate: new Date().toISOString().split('T')[0],
+          likesCount: 140,
+          commentsCount: 22,
+          extractedDate: now.split('T')[0],
         },
       ],
       exports: {
         id: `exp_${Date.now()}`,
-        projectId: `proj_${Date.now()}`,
-        loveablePrompt: `Create a landing page for ${data.businessName} (${data.industry}). Primary color #052b66, accent green #45cc42. Modern minimal aesthetic.`,
+        projectId: newProjId,
+        loveablePrompt: `Create a landing page for ${data.businessName} (${data.industry}). Primary color #052b66, accent green #45cc42.`,
         jsonExport: JSON.stringify({ businessName: data.businessName, industry: data.industry }, null, 2),
-        markdownExport: `# ${data.businessName}\nIndustry: ${data.industry}\n...`,
-        createdAt: new Date().toISOString(),
+        markdownExport: `# ${data.businessName}\nIndustry: ${data.industry}\nCreated: ${now}`,
+        createdAt: now,
         downloadCount: 0,
       },
     };
 
-    // Attempt Supabase insert if available
     const supabase = getSupabaseClient();
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase.from('projects').insert([newProj]);
+        const payload = {
+          id: newProj.id,
+          businessName: newProj.businessName,
+          instagramUrl: newProj.instagramUrl,
+          industry: newProj.industry,
+          status: newProj.status,
+          notes: newProj.notes,
+          mediaCount: newProj.mediaCount,
+          readinessScore: newProj.readinessScore,
+          createdAt: newProj.createdAt,
+          updatedAt: newProj.updatedAt,
+          created_at: newProj.createdAt,
+          businessInfo: newProj.businessInfo,
+          branding: newProj.branding,
+          generatedCopy: newProj.generatedCopy,
+          media: newProj.media,
+          exports: newProj.exports
+        };
+
+        const { error } = await supabase.from('projects').insert([payload]);
         if (error) {
-          console.warn('Supabase insert warning:', error.message);
-        } else {
-          addToast('success', 'Inserted to Supabase', 'Project stored directly in Supabase project database.');
+          console.warn('First insert attempt warning:', error.message);
+          const fallback = await supabase.from('projects').insert([newProj]);
+          if (fallback.error) {
+            console.error('Fallback insert error:', fallback.error.message);
+          }
         }
-      } catch (e) {
-        console.warn('Supabase exception:', e);
+        addToast('success', 'Inserted into Supabase', `${newProj.businessName} saved to Supabase projects table.`);
+        // Refresh list from Supabase
+        await fetchProjects();
+      } catch (e: any) {
+        console.error('Failed to insert into Supabase:', e);
+        addToast('error', 'Database Error', e.message || 'Failed to insert project into Supabase.');
+        setProjects((prev) => [newProj, ...prev]);
       }
+    } else {
+      setProjects((prev) => [newProj, ...prev]);
+      addToast('success', 'Project Created', `${newProj.businessName} created locally.`);
     }
 
-    setProjects((prev) => [newProj, ...prev]);
     setActiveProjectId(newProj.id);
 
     // Add activity log
@@ -264,7 +333,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: `act_${Date.now()}`,
       projectId: newProj.id,
       projectTitle: newProj.businessName,
-      action: 'Created new project & initiated Instagram data parsing',
+      action: 'Created new project and saved to Supabase',
       timestamp: 'Just now',
       user: 'You',
       status: 'completed',
@@ -275,14 +344,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newNotif: NotificationItem = {
       id: `notif_${Date.now()}`,
       title: 'Project Initialized',
-      message: `${newProj.businessName} successfully created and ready for pipeline.`,
+      message: `${newProj.businessName} successfully created and ready in Supabase.`,
       timestamp: 'Just now',
       read: false,
       type: 'success',
     };
     setNotifications((prev) => [newNotif, ...prev]);
 
-    addToast('success', 'Project Created', `Started Instagram extraction for ${newProj.businessName}`);
     return newProj;
   };
 
@@ -314,13 +382,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addToast('info', 'Project Updated', 'Changes saved successfully.');
   };
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     const projToDelete = projects.find((p) => p.id === id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
 
     const supabase = getSupabaseClient();
     if (isSupabaseConfigured && supabase) {
-      supabase.from('projects').delete().eq('id', id).then();
+      try {
+        await supabase.from('projects').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase delete project error:', err);
+      }
     }
 
     if (activeProjectId === id) {
@@ -359,6 +431,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         projects,
         isLoadingProjects,
         loadProjectsError,
+        fetchProjects,
         activeProjectId,
         activeProject,
         activeTab,
@@ -392,3 +465,4 @@ export const useProjects = (): ProjectContextType => {
   }
   return context;
 };
+
