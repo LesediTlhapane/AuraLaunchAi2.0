@@ -1,0 +1,6 @@
+{
+  "name": "Aura Launch AI",
+  "description": "AI-powered SaaS platform that transforms business Instagram profiles into professional websites",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

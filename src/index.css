@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary-blue: #052b66;
+    --primary-blue-hover: #031d47;
+    --accent-green: #45cc42;
+    --accent-green-hover: #3ebe3b;
+    --bg-light: #f8fafc;
+    --card-light: #ffffff;
+  }
+
+  .dark {
+    --primary-blue: #0a3d8f;
+    --primary-blue-hover: #083173;
+    --accent-green: #45cc42;
+    --accent-green-hover: #3ebe3b;
+    --bg-light: #0b1329;
+    --card-light: #111c38;
+  }
+
+  body {
+    background-color: var(--bg-light);
+    color: #0f172a;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .dark body {
+    color: #f8fafc;
+  }
+}
+
+/* Custom Utilities */
+.bg-aura-blue {
+  background-color: var(--primary-blue);
+}
+
+.text-aura-blue {
+  color: var(--primary-blue);
+}
+
+.border-aura-blue {
+  border-color: var(--primary-blue);
+}
+
+.bg-aura-green {
+  background-color: var(--accent-green);
+}
+
+.text-aura-green {
+  color: var(--accent-green);
+}
+
+.border-aura-green {
+  border-color: var(--accent-green);
+}
+
+/* Glassmorphism effects */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-panel {
+  background: rgba(17, 28, 56, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Professional Polish interactive ring styles */
+*:focus-visible {
+  outline: 2px solid var(--accent-green) !important;
+  outline-offset: 2px !important;
+}
+
+/* Card hover elevations */
+.card-hover {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px rgba(5, 43, 102, 0.08);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Skeleton animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(241, 245, 249, 1) 0%, rgba(226, 232, 240, 1) 50%, rgba(241, 245, 249, 1) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, rgba(30, 41, 59, 1) 0%, rgba(51, 65, 85, 1) 50%, rgba(30, 41, 59, 1) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+
