@@ -40,27 +40,41 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'aura_theme_dark';
 
-// Helper function to safely parse Supabase table row into Project object
+// Helper function to safely parse Supabase projects table row into Project object
 function parseSupabaseRow(row: any): Project {
+  const businessName = row.name || row.businessName || row.business_name || 'Untitled Business';
+  const instagramUrl = row.target_instagram_url || row.instagramUrl || row.instagram_url || '';
+  const instagramHandle = instagramUrl ? '@' + String(instagramUrl).split('/').filter(Boolean).pop() : '@business';
+  const industry: IndustryType = (row.industry as IndustryType) || 'Hospitality & Dining';
+
   return {
     id: String(row.id || `proj_${Date.now()}`),
-    businessName: row.businessName || row.business_name || 'Untitled Business',
-    instagramUrl: row.instagramUrl || row.instagram_url || '',
-    industry: row.industry || 'Hospitality & Dining',
+    user_id: row.user_id || null,
+    name: row.name || businessName,
+    target_instagram_url: row.target_instagram_url || instagramUrl,
+    businessName,
+    instagramUrl,
+    industry,
     status: row.status || 'ready',
-    createdAt: row.createdAt || row.created_at || new Date().toISOString(),
-    updatedAt: row.updatedAt || row.updated_at || new Date().toISOString(),
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || new Date().toISOString(),
     notes: row.notes || '',
-    mediaCount: typeof row.mediaCount === 'number' ? row.mediaCount : (row.media_count || (Array.isArray(row.media) ? row.media.length : 0)),
+    mediaCount: typeof row.mediaCount === 'number' ? row.mediaCount : (row.media_count || (Array.isArray(row.media) ? row.media.length : 1)),
     readinessScore: typeof row.readinessScore === 'number' ? row.readinessScore : (row.readiness_score || 85),
-    businessInfo: typeof row.businessInfo === 'object' && row.businessInfo ? row.businessInfo : (typeof row.business_info === 'object' && row.business_info ? row.business_info : {
-      businessName: row.businessName || row.business_name || 'Untitled Business',
-      instagramHandle: row.instagramUrl ? '@' + String(row.instagramUrl).split('/').filter(Boolean).pop() : '@business',
-      instagramUrl: row.instagramUrl || row.instagram_url || '',
-      industry: row.industry || 'Hospitality & Dining',
+    businessInfo: typeof row.businessInfo === 'object' && row.businessInfo ? row.businessInfo : {
+      businessName,
+      instagramHandle,
+      instagramUrl,
+      industry,
+      phone: '+1 (555) 234-5678',
+      email: `contact@${businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+      address: '100 Innovation Way',
+      operatingHours: 'Mon-Fri: 9:00 AM – 6:00 PM',
+      bio: `${businessName} – Premier digital brand extracted from Instagram. ✨`,
+      websiteUrl: `https://${businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+      services: ['Primary Service', 'Specialty Offerings', 'Consultation'],
       notes: row.notes || '',
-      services: []
-    }),
+    },
     branding: typeof row.branding === 'object' && row.branding ? row.branding : {
       primaryColor: '#052b66',
       secondaryColor: '#45cc42',
@@ -69,25 +83,53 @@ function parseSupabaseRow(row: any): Project {
       textColor: '#0F172A',
       headingFont: 'Playfair Display',
       bodyFont: 'Plus Jakarta Sans',
-      personality: { professionalism: 80, minimalism: 80, vibrancy: 70, luxury: 70 }
+      personality: { professionalism: 85, minimalism: 80, vibrancy: 75, luxury: 80 },
+      logoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80',
     },
-    generatedCopy: typeof row.generatedCopy === 'object' && row.generatedCopy ? row.generatedCopy : (typeof row.generated_copy === 'object' && row.generated_copy ? row.generated_copy : {
-      heroHeadline: `${row.businessName || row.business_name || 'Business'} Official Website`,
-      heroSubheadline: `Specialized ${row.industry || 'services'} offerings.`,
-      aboutText: 'Welcome to our business page.',
-      servicesIntro: 'Our Core Offerings',
-      servicesList: []
-    }),
-    media: Array.isArray(row.media) ? row.media : [],
+    generatedCopy: typeof row.generatedCopy === 'object' && row.generatedCopy ? row.generatedCopy : {
+      heroHeadline: `Official Digital Platform for ${businessName}`,
+      heroSubheadline: `Specialized ${industry.toLowerCase()} services and bespoke experiences.`,
+      aboutText: `Welcome to ${businessName}. We bring unmatched quality and expertise in ${industry.toLowerCase()}.`,
+      servicesIntro: 'Tailored solutions designed for excellence.',
+      servicesList: [
+        { title: 'Core Services', description: 'Comprehensive solutions tailored to your unique requirements.' },
+        { title: 'Advisory & Strategy', description: 'Expert guidance to accelerate growth and visibility.' },
+      ],
+      ctaHeadline: `Get Started with ${businessName}`,
+      ctaButtonText: 'Inquire Now',
+      faqs: [
+        { question: `How do I contact ${businessName}?`, answer: 'Reach out via our inquiry form or direct message.' },
+      ],
+      seoMeta: {
+        title: `${businessName} | Official Website`,
+        description: `Welcome to ${businessName}. Premier ${industry.toLowerCase()} services.`,
+        keywords: [businessName.toLowerCase(), industry.toLowerCase()],
+      },
+    },
+    media: Array.isArray(row.media) ? row.media : [
+      {
+        id: `med_${row.id || Date.now()}`,
+        projectId: String(row.id || ''),
+        url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&auto=format&fit=crop&q=80',
+        caption: `${businessName} workspace and primary showcase.`,
+        category: 'Atmosphere',
+        qualityScore: 95,
+        isHeroCandidate: true,
+        aspectRatio: '1:1',
+        likesCount: 140,
+        commentsCount: 22,
+        extractedDate: new Date().toISOString().split('T')[0],
+      },
+    ],
     exports: typeof row.exports === 'object' && row.exports ? row.exports : {
       id: `exp_${row.id}`,
       projectId: String(row.id),
-      loveablePrompt: `Create a landing page for ${row.businessName || 'Business'}`,
-      jsonExport: JSON.stringify(row, null, 2),
-      markdownExport: `# ${row.businessName || 'Business'}\nIndustry: ${row.industry || 'General'}`,
+      loveablePrompt: `Create a landing page for ${businessName} (${industry}).`,
+      jsonExport: JSON.stringify({ businessName, industry }, null, 2),
+      markdownExport: `# ${businessName}\nIndustry: ${industry}`,
       createdAt: new Date().toISOString(),
-      downloadCount: 0
-    }
+      downloadCount: 0,
+    },
   };
 }
 
@@ -319,36 +361,31 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const { data: { session: activeSession } } = await supabase.auth.getSession();
         const userId = activeSession?.user?.id;
 
-        const payload = {
-          id: newProj.id,
+        // Insert ONLY the valid projects table columns per task constraints:
+        // user_id, name, target_instagram_url, status
+        const dbPayload = {
           user_id: userId || null,
-          businessName: newProj.businessName,
-          instagramUrl: newProj.instagramUrl,
-          industry: newProj.industry,
-          status: newProj.status,
-          notes: newProj.notes,
-          mediaCount: newProj.mediaCount,
-          readinessScore: newProj.readinessScore,
-          createdAt: newProj.createdAt,
-          updatedAt: newProj.updatedAt,
-          created_at: newProj.createdAt,
-          businessInfo: newProj.businessInfo,
-          branding: newProj.branding,
-          generatedCopy: newProj.generatedCopy,
-          media: newProj.media,
-          exports: newProj.exports
+          name: data.businessName,
+          target_instagram_url: formattedUrl,
+          status: 'ready',
         };
 
-        const { error } = await supabase.from('projects').insert([payload]);
+        const { data: insertedData, error } = await supabase
+          .from('projects')
+          .insert([dbPayload])
+          .select('*');
+
         if (error) {
-          console.warn('First insert attempt warning:', error.message);
-          const fallback = await supabase.from('projects').insert([newProj]);
-          if (fallback.error) {
-            console.error('Fallback insert error:', fallback.error.message);
+          console.error('Supabase project insert error:', error.message);
+          addToast('error', 'Database Error', error.message || 'Failed to insert project into Supabase.');
+        } else {
+          addToast('success', 'Project Created', `${data.businessName} saved to Supabase projects table.`);
+          if (insertedData && insertedData[0]) {
+            newProj.id = String(insertedData[0].id);
+            if (insertedData[0].created_at) newProj.createdAt = insertedData[0].created_at;
+            if (insertedData[0].updated_at) newProj.updatedAt = insertedData[0].updated_at;
           }
         }
-        addToast('success', 'Inserted into Supabase', `${newProj.businessName} saved to Supabase projects table.`);
-        // Refresh list from Supabase
         await fetchProjects();
       } catch (e: any) {
         console.error('Failed to insert into Supabase:', e);
@@ -405,9 +442,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     const supabase = getSupabaseClient();
-    if (isSupabaseConfigured && supabase && updatedProj) {
+    if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('projects').update(updatedProj).eq('id', id);
+        const updatePayload: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+        };
+        if (updates.businessName !== undefined) updatePayload.name = updates.businessName;
+        if (updates.name !== undefined) updatePayload.name = updates.name;
+        if (updates.instagramUrl !== undefined) updatePayload.target_instagram_url = updates.instagramUrl;
+        if (updates.target_instagram_url !== undefined) updatePayload.target_instagram_url = updates.target_instagram_url;
+        if (updates.status !== undefined) updatePayload.status = updates.status;
+
+        await supabase.from('projects').update(updatePayload).eq('id', id);
       } catch (err) {
         console.warn('Failed to update project in Supabase:', err);
       }

@@ -83,8 +83,21 @@ export interface ExportPackage {
   downloadCount: number;
 }
 
+export interface ProjectRow {
+  id: string;
+  user_id?: string | null;
+  name: string;
+  target_instagram_url?: string | null;
+  status: ProjectStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
+  user_id?: string | null;
+  name?: string;
+  target_instagram_url?: string | null;
   businessName: string;
   instagramUrl: string;
   industry: IndustryType;
