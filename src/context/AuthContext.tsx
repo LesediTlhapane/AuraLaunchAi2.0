@@ -125,16 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Local authentication fallback for instant demo
-    const loggedUser: UserProfile = {
-      ...initialUserProfile,
-      email: email,
-      fullName: email.split('@')[0].replace('.', ' ').toUpperCase(),
-    };
-    setUser(loggedUser);
-    setIsAuthenticated(true);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loggedUser));
-    return { success: true };
+    return { success: false, error: 'Supabase authentication is unavailable or failed.' };
   };
 
   const register = async (fullName: string, companyName: string, email: string, pass: string) => {
@@ -172,18 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    // Local register fallback
-    const newUser: UserProfile = {
-      ...initialUserProfile,
-      id: `usr_${Date.now()}`,
-      email,
-      fullName,
-      companyName: companyName || 'Aura Intelligence Client',
-    };
-    setUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
-    return { success: true };
+    return { success: false, error: 'Supabase authentication is unavailable or failed.' };
   };
 
   const forgotPassword = async (email: string) => {

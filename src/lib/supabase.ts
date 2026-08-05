@@ -13,7 +13,8 @@ const getEnv = (key: string, fallbackKey?: string): string => {
   return '';
 };
 
-export const supabaseUrl = getEnv('VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+const rawUrl = getEnv('VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
+export const supabaseUrl = rawUrl ? rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '') : '';
 export const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
 export const isSupabaseConfigured = Boolean(
@@ -23,6 +24,10 @@ export const isSupabaseConfigured = Boolean(
   supabaseAnonKey.trim() !== '' &&
   !supabaseUrl.includes('your-supabase-url')
 );
+
+console.log("Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
+console.log("Supabase Key Exists:", !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+console.log("isSupabaseConfigured:", isSupabaseConfigured);
 
 let supabaseInstance: SupabaseClient | null = null;
 

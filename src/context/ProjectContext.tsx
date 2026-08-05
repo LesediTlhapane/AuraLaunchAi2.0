@@ -353,94 +353,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log('[createProject] Finished successfully:', createdProject);
       return createdProject;
     } else {
-      console.warn('[createProject] Supabase is not configured. Falling back to local memory store.');
-      const now = new Date().toISOString();
-      const newProjId = `proj_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      const fallbackProj: Project = {
-        id: newProjId,
-        businessName: data.businessName,
-        instagramUrl: formattedUrl,
-        industry: data.industry,
-        status: 'completed',
-        createdAt: now,
-        updatedAt: now,
-        notes: data.notes || '',
-        mediaCount: 1,
-        readinessScore: 90,
-        businessInfo: {
-          businessName: data.businessName,
-          instagramHandle: cleanedHandle,
-          instagramUrl: formattedUrl,
-          industry: data.industry,
-          phone: '+1 (555) 234-5678',
-          email: `contact@${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-          address: '100 Innovation Way',
-          operatingHours: 'Mon-Fri: 9:00 AM – 6:00 PM',
-          bio: `${data.businessName} – Premier ${data.industry.toLowerCase()} brand extracted from Instagram. ✨`,
-          websiteUrl: `https://${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-          services: ['Primary Service', 'Specialty Offerings', 'Consultation'],
-          notes: data.notes,
-        },
-        branding: {
-          primaryColor: '#052b66',
-          secondaryColor: '#45cc42',
-          accentColor: '#E2B857',
-          backgroundColor: '#F8FAFC',
-          textColor: '#0F172A',
-          headingFont: 'Playfair Display',
-          bodyFont: 'Plus Jakarta Sans',
-          personality: { professionalism: 85, minimalism: 80, vibrancy: 75, luxury: 80 },
-          logoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80',
-        },
-        generatedCopy: {
-          heroHeadline: `Official Digital Platform for ${data.businessName}`,
-          heroSubheadline: `Specialized ${data.industry.toLowerCase()} services and bespoke experiences.`,
-          aboutText: `Welcome to ${data.businessName}. We bring unmatched quality and expertise in ${data.industry.toLowerCase()}.`,
-          servicesIntro: 'Tailored solutions designed for excellence.',
-          servicesList: [
-            { title: 'Core Services', description: 'Comprehensive solutions tailored to your unique requirements.' },
-            { title: 'Advisory & Strategy', description: 'Expert guidance to accelerate growth and visibility.' },
-          ],
-          ctaHeadline: `Get Started with ${data.businessName}`,
-          ctaButtonText: 'Inquire Now',
-          faqs: [{ question: `How do I contact ${data.businessName}?`, answer: 'Reach out via our inquiry form or direct message.' }],
-          seoMeta: {
-            title: `${data.businessName} | Official Website`,
-            description: `Welcome to ${data.businessName}. Premier ${data.industry.toLowerCase()} services.`,
-            keywords: [data.businessName.toLowerCase(), data.industry.toLowerCase()],
-          },
-        },
-        media: [
-          {
-            id: `med_${Date.now()}`,
-            projectId: newProjId,
-            url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&auto=format&fit=crop&q=80',
-            caption: `${data.businessName} workspace and primary showcase.`,
-            category: 'Atmosphere',
-            qualityScore: 95,
-            isHeroCandidate: true,
-            aspectRatio: '1:1',
-            likesCount: 140,
-            commentsCount: 22,
-            extractedDate: now.split('T')[0],
-          },
-        ],
-        exports: {
-          id: `exp_${Date.now()}`,
-          projectId: newProjId,
-          loveablePrompt: `Create a landing page for ${data.businessName} (${data.industry}).`,
-          jsonExport: JSON.stringify({ businessName: data.businessName, industry: data.industry }, null, 2),
-          markdownExport: `# ${data.businessName}\nIndustry: ${data.industry}\nCreated: ${now}`,
-          createdAt: now,
-          downloadCount: 0,
-        },
-      };
-
-      console.log('[setProjects] Local fallback mode: setting projects state');
-      setProjects((prev) => [fallbackProj, ...prev]);
-      setActiveProjectId(fallbackProj.id);
-      addToast('success', 'Project Created', `${fallbackProj.businessName} created locally.`);
-      return fallbackProj;
+      const errMessage = 'Supabase client is not initialized or configured.';
+      console.error('[createProject]', errMessage);
+      addToast('error', 'Database Error', errMessage);
+      throw new Error(errMessage);
     }
   };
 
