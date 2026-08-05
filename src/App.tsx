@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProjectProvider, useProjects } from './context/ProjectContext';
@@ -40,7 +41,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b1329] text-slate-900 dark:text-slate-100 flex font-sans selection:bg-[#45cc42] selection:text-[#052b66]">
+    <div className="min-h-screen bg-[#F4F7FB] dark:bg-[#070c18] text-slate-900 dark:text-slate-100 flex font-sans selection:bg-[#45cc42] selection:text-[#052b66]">
       {/* Sidebar Navigation */}
       <Sidebar
         mobileOpen={mobileSidebarOpen}
@@ -48,27 +49,37 @@ const MainLayout: React.FC = () => {
       />
 
       {/* Main Content Viewport */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 lg:pl-72 flex flex-col min-w-0 min-h-screen">
         <TopNav
           onMobileMenuToggle={() => setMobileSidebarOpen(true)}
           onOpenSearch={() => setIsCommandPaletteOpen(true)}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {/* Dynamic page switching */}
-          {activeProjectId ? (
-            <ProjectDetailsPage />
-          ) : (
-            <>
-              {activeTab === 'dashboard' && <DashboardPage />}
-              {activeTab === 'projects' && <ProjectsPage />}
-              {activeTab === 'media' && <MediaPage />}
-              {activeTab === 'exports' && <ExportsPage />}
-              {activeTab === 'settings' && <SettingsPage />}
-              {activeTab === 'profile' && <ProfilePage />}
-              {activeTab === '404' && <NotFoundPage />}
-            </>
-          )}
+          {/* Dynamic page switching with cinematic transitions */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeProjectId || activeTab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              {activeProjectId ? (
+                <ProjectDetailsPage />
+              ) : (
+                <>
+                  {activeTab === 'dashboard' && <DashboardPage />}
+                  {activeTab === 'projects' && <ProjectsPage />}
+                  {activeTab === 'media' && <MediaPage />}
+                  {activeTab === 'exports' && <ExportsPage />}
+                  {activeTab === 'settings' && <SettingsPage />}
+                  {activeTab === 'profile' && <ProfilePage />}
+                  {activeTab === '404' && <NotFoundPage />}
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

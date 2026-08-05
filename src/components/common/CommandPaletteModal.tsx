@@ -28,8 +28,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({ isOpen
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const filteredProjects = projects.filter(
     (p) =>
       p.businessName.toLowerCase().includes(query.toLowerCase()) ||
@@ -50,14 +48,15 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({ isOpen
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-slate-900/50 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-          transition={{ duration: 0.15 }}
-          className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
-        >
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.15 }}
+            className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+          >
           {/* Header input */}
           <div className="flex items-center px-4 py-3 border-b border-slate-100 dark:border-slate-800 gap-3">
             <Search className="w-5 h-5 text-slate-400 shrink-0" />
@@ -164,6 +163,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({ isOpen
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 };

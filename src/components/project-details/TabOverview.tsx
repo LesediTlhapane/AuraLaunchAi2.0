@@ -10,7 +10,8 @@ import {
   Palette, 
   ExternalLink,
   Zap,
-  TrendingUp
+  TrendingUp,
+  Brain
 } from 'lucide-react';
 
 interface TabOverviewProps {
@@ -51,8 +52,8 @@ export const TabOverview: React.FC<TabOverviewProps> = ({ project, onNavigateTab
       status: isCompleted ? 'completed' : isGenerating ? 'in_progress' : 'pending' 
     },
     { 
-      title: 'AI Export Packages', 
-      desc: 'Loveable, Framer & JSON prompts generated', 
+      title: 'project_intelligence Record', 
+      desc: '8 JSONB models saved for frontend & n8n integration', 
       status: isCompleted ? 'completed' : 'pending' 
     },
   ];
@@ -104,7 +105,16 @@ export const TabOverview: React.FC<TabOverviewProps> = ({ project, onNavigateTab
       </div>
 
       {/* Quick Access Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <button
+          onClick={() => onNavigateTab('intelligence')}
+          className="p-4 rounded-2xl bg-[#052b66] text-white border border-[#052b66] hover:bg-[#0a3d8f] transition text-left group shadow-xs col-span-2 sm:col-span-1"
+        >
+          <Brain className="w-5 h-5 text-[#45cc42] group-hover:scale-110 transition" />
+          <p className="text-base font-bold text-white mt-2">AI Record</p>
+          <p className="text-[11px] text-blue-200">JSONB Models</p>
+        </button>
+
         <button
           onClick={() => onNavigateTab('media')}
           className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#052b66] transition text-left group shadow-xs"

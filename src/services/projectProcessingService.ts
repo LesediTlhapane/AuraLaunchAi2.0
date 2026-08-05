@@ -1,5 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { ProjectStatus } from '../types';
+import { Project, ProjectStatus } from '../types';
+import { projectIntelligenceService } from './projectIntelligenceService';
 
 export interface ProcessingStep {
   status: ProjectStatus;
@@ -25,7 +26,8 @@ class ProjectProcessingService {
    */
   async processProject(
     projectId: string,
-    onStatusChange?: (projectId: string, status: ProjectStatus) => void
+    onStatusChange?: (projectId: string, status: ProjectStatus) => void,
+    projectObj?: Project
   ): Promise<void> {
     if (this.activeJobs.has(projectId)) {
       console.log(`[ProjectProcessingService] Project ${projectId} is already processing.`);
@@ -64,6 +66,15 @@ class ProjectProcessingService {
             }
           } catch (dbErr) {
             console.error(`[ProjectProcessingService] Failed DB status update:`, dbErr);
+          }
+        }
+
+        // If completed, ensure intelligence record exists in project_intelligence table
+        if (step.status === 'completed' && projectObj) {
+          try {
+            await projectIntelligenceService.getIntelligence(projectId, { ...projectObj, status: 'completed' });
+          } catch (intelErr) {
+            console.warn('[ProjectProcessingService] Error ensuring intelligence record:', intelErr);
           }
         }
 

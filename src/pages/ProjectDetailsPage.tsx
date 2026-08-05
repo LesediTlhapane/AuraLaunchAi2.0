@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useProjects } from '../context/ProjectContext';
 import { TabOverview } from '../components/project-details/TabOverview';
+import { TabIntelligence } from '../components/project-details/TabIntelligence';
 import { TabMedia } from '../components/project-details/TabMedia';
 import { TabBusinessInfo } from '../components/project-details/TabBusinessInfo';
 import { TabBranding } from '../components/project-details/TabBranding';
@@ -12,6 +13,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { 
   ArrowLeft, 
   LayoutDashboard, 
+  Brain,
   Image, 
   Building2, 
   Palette, 
@@ -24,7 +26,7 @@ import {
 export const ProjectDetailsPage: React.FC = () => {
   const { activeProject, setActiveProjectId } = useProjects();
   const [activeDetailTab, setActiveDetailTab] = useState<
-    'overview' | 'media' | 'info' | 'branding' | 'copy' | 'preview' | 'exports'
+    'overview' | 'intelligence' | 'media' | 'info' | 'branding' | 'copy' | 'preview' | 'exports'
   >('overview');
 
   if (!activeProject) {
@@ -33,6 +35,7 @@ export const ProjectDetailsPage: React.FC = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'intelligence', label: 'AI Intelligence', icon: <Brain className="w-4 h-4" /> },
     { id: 'media', label: 'Media', icon: <Image className="w-4 h-4" /> },
     { id: 'info', label: 'Business Info', icon: <Building2 className="w-4 h-4" /> },
     { id: 'branding', label: 'Branding', icon: <Palette className="w-4 h-4" /> },
@@ -96,6 +99,7 @@ export const ProjectDetailsPage: React.FC = () => {
         {activeDetailTab === 'overview' && (
           <TabOverview project={activeProject} onNavigateTab={(t) => setActiveDetailTab(t as any)} />
         )}
+        {activeDetailTab === 'intelligence' && <TabIntelligence project={activeProject} />}
         {activeDetailTab === 'media' && <TabMedia project={activeProject} />}
         {activeDetailTab === 'info' && <TabBusinessInfo project={activeProject} />}
         {activeDetailTab === 'branding' && <TabBranding project={activeProject} />}

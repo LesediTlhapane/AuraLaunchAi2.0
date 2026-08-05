@@ -158,18 +158,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState<boolean>(false);
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : false;
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
   });
 
   // Apply dark mode class to html element
   useEffect(() => {
+    const root = document.documentElement;
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
     }
-    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(darkMode));
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(darkMode));
+    } catch (e) {
+      console.warn('Failed to save theme setting:', e);
+    }
   }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);

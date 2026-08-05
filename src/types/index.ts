@@ -93,6 +93,98 @@ export interface ProjectRow {
   updated_at: string;
 }
 
+export interface BusinessProfileJSON {
+  businessName: string;
+  instagramHandle: string;
+  industry: string;
+  targetAudience: string;
+  uniqueValueProposition: string;
+  brandTone: string;
+  contactEmail: string;
+  operatingHours: string;
+  location: string;
+  bioSummary: string;
+}
+
+export interface BrandAnalysisJSON {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  fontFamily: { heading: string; body: string };
+  aestheticStyle: string;
+  brandVoice: string;
+  sentimentScore: number;
+  keyThemes: string[];
+}
+
+export interface CompetitorItem {
+  name: string;
+  handle: string;
+  keyDifference: string;
+  marketShareEst: string;
+}
+
+export interface CompetitorsJSON {
+  primaryCompetitors: CompetitorItem[];
+  marketPositioning: string;
+  competitiveAdvantage: string;
+}
+
+export interface MarketingStrategyJSON {
+  contentPillars: { title: string; weight: string; description: string }[];
+  growthTactics: string[];
+  recommendedChannels: string[];
+  campaignConcepts: { title: string; objective: string; copySnippet: string }[];
+}
+
+export interface GeneratedCopyJSON {
+  heroHeadline: string;
+  heroSubheadline: string;
+  aboutText: string;
+  valueProps: { title: string; description: string }[];
+  ctaText: string;
+  seoKeywords: string[];
+}
+
+export interface WebsiteContentJSON {
+  navigation: string[];
+  sections: { sectionId: string; title: string; contentType: string }[];
+  heroDesignSpec: string;
+  footerText: string;
+}
+
+export interface SocialMediaAssetsJSON {
+  totalPostsAnalyzed: number;
+  topHashtags: string[];
+  mediaQualityScore: number;
+  heroCandidateCount: number;
+  keyVisualHighlights: string[];
+}
+
+export interface ProcessingLogItem {
+  timestamp: string;
+  stage: string;
+  executor: 'n8n_workflow' | 'pipeline_simulator';
+  executionTimeMs: number;
+  status: 'success' | 'warning' | 'error';
+  details: string;
+}
+
+export interface ProjectIntelligence {
+  id: string;
+  project_id: string;
+  created_at: string;
+  updated_at: string;
+  business_profile: BusinessProfileJSON;
+  brand_analysis: BrandAnalysisJSON;
+  competitors: CompetitorsJSON;
+  marketing_strategy: MarketingStrategyJSON;
+  generated_copy: GeneratedCopyJSON;
+  website_content: WebsiteContentJSON;
+  social_media_assets: SocialMediaAssetsJSON;
+  processing_logs: ProcessingLogItem[];
+}
+
 export interface Project {
   id: string;
   user_id?: string | null;
@@ -112,6 +204,7 @@ export interface Project {
   generatedCopy: GeneratedCopySection;
   media: MediaItem[];
   exports?: ExportPackage;
+  intelligence?: ProjectIntelligence;
 }
 
 export interface UserProfile {
