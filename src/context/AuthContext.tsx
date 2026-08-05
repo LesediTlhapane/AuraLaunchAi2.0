@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { UserProfile } from '../types';
 import { initialUserProfile } from '../lib/mockData';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  session: Session | null;
   user: UserProfile | null;
   authMode: 'login' | 'register' | 'forgot';
   setAuthMode: (mode: 'login' | 'register' | 'forgot') => void;
@@ -20,40 +23,64 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY = 'aura_auth_user_v1';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-  const [user, setUser] = useState<UserProfile | null>(initialUserProfile);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
 
   useEffect(() => {
     const supabase = getSupabaseClient();
     if (isSupabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
+      // 1. Fetch initial session synchronously or via promise
+      supabase.auth.getSession().then(({ data: { session: initialSession }, error }) => {
+        if (error) {
+          console.warn('[AuthContext] getSession error:', error.message);
+        }
+        setSession(initialSession);
+        if (initialSession?.user) {
           setIsAuthenticated(true);
           setUser({
             ...initialUserProfile,
-            id: session.user.id,
-            email: session.user.email || 'user@auratech.ai',
-            fullName: session.user.user_metadata?.full_name || 'Aura Launch User',
+            id: initialSession.user.id,
+            email: initialSession.user.email || 'user@auratech.ai',
+            fullName: initialSession.user.user_metadata?.full_name || initialSession.user.email?.split('@')[0] || 'Aura User',
+            companyName: initialSession.user.user_metadata?.company_name || 'Aura Client',
           });
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
         }
+        setIsAuthLoading(false);
+      }).catch((err) => {
+        console.error('[AuthContext] getSession exception:', err);
+        setIsAuthenticated(false);
+        setIsAuthLoading(false);
       });
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
+      // 2. Listen to state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+        console.log('[AuthContext] onAuthStateChange event:', _event, 'user:', currentSession?.user?.email);
+        setSession(currentSession);
+        if (currentSession?.user) {
           setIsAuthenticated(true);
           setUser((prev) => ({
             ...(prev || initialUserProfile),
-            id: session.user.id,
-            email: session.user.email || 'user@auratech.ai',
-            fullName: session.user.user_metadata?.full_name || 'Aura Launch User',
+            id: currentSession.user.id,
+            email: currentSession.user.email || 'user@auratech.ai',
+            fullName: currentSession.user.user_metadata?.full_name || prev?.fullName || 'Aura User',
+            companyName: currentSession.user.user_metadata?.company_name || prev?.companyName || 'Aura Client',
           }));
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
         }
+        setIsAuthLoading(false);
       });
 
       return () => subscription.unsubscribe();
     } else {
-      // Local storage persistence fallback
+      // Local storage persistence fallback when Supabase is not configured
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         try {
@@ -61,9 +88,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(parsed);
           setIsAuthenticated(true);
         } catch {
-          // ignore error
+          setIsAuthenticated(false);
+          setUser(null);
         }
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
       }
+      setIsAuthLoading(false);
     }
   }, []);
 
@@ -78,11 +110,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         return { success: false, error: error.message };
       }
-      if (data.user) {
+      if (data.session && data.user) {
+        setSession(data.session);
         const loggedUser: UserProfile = {
           ...initialUserProfile,
           id: data.user.id,
           email: data.user.email || email,
+          fullName: data.user.user_metadata?.full_name || email.split('@')[0],
         };
         setUser(loggedUser);
         setIsAuthenticated(true);
@@ -121,6 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: error.message };
       }
       if (data.user) {
+        if (data.session) {
+          setSession(data.session);
+        }
         const newUser: UserProfile = {
           ...initialUserProfile,
           id: data.user.id,
@@ -168,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
+    setSession(null);
     localStorage.removeItem(LOCAL_STORAGE_KEY);
     setIsAuthenticated(false);
     setUser(null);
@@ -184,6 +222,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         isAuthenticated,
+        isAuthLoading,
+        session,
         user,
         authMode,
         setAuthMode,

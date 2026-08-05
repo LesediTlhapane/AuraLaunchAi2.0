@@ -16,12 +16,24 @@ import { TopNav } from './components/layout/TopNav';
 import { ToastContainer } from './components/common/ToastContainer';
 import { CommandPaletteModal } from './components/common/CommandPaletteModal';
 import { NewProjectModal } from './components/projects/NewProjectModal';
+import { Loader2 } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { activeTab, activeProjectId, isNewProjectModalOpen, setIsNewProjectModalOpen } = useProjects();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b1329] flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-10 h-10 text-[#052b66] dark:text-[#45cc42] animate-spin mb-3" />
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Verifying Supabase authentication session...
+        </p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <AuthPage />;

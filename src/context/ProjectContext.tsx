@@ -3,6 +3,7 @@ import { Project, IndustryType, ActiveTab, NotificationItem, ActivityLog } from 
 import { initialNotifications, initialActivityLogs } from '../lib/mockData';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
 
 interface ProjectContextType {
   projects: Project[];
@@ -92,6 +93,7 @@ function parseSupabaseRow(row: any): Project {
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { addToast } = useToast();
+  const { isAuthLoading, isAuthenticated, session: authSession } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
   const [loadProjectsError, setLoadProjectsError] = useState<string | null>(null);
@@ -126,12 +128,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Fetch projects directly from Supabase
   const fetchProjects = useCallback(async () => {
+    // If auth is still restoring session, wait before fetching
+    if (isAuthLoading) {
+      return;
+    }
+
     setIsLoadingProjects(true);
     setLoadProjectsError(null);
 
     const supabase = getSupabaseClient();
     if (isSupabaseConfigured && supabase) {
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        // 6. Log before querying projects: current user, current session, access token exists
+        console.log('[ProjectContext] Current User:', user);
+        console.log('[ProjectContext] Current Session:', currentSession);
+        console.log('[ProjectContext] Access Token Exists:', Boolean(currentSession?.access_token));
+
+        // 7. If no session exists, do not query Supabase
+        if (!currentSession || !currentSession.access_token) {
+          console.warn('[ProjectContext] No active authenticated session found. Skipping Supabase query.');
+          setProjects([]);
+          setIsLoadingProjects(false);
+          return;
+        }
+
         let { data, error } = await supabase
           .from('projects')
           .select('*')
@@ -165,15 +188,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsLoadingProjects(false);
       }
     } else {
-      // Supabase not configured yet -> strictly empty projects list (NO mock data!)
+      // Supabase not configured -> strictly empty projects list
       setProjects([]);
       setIsLoadingProjects(false);
     }
-  }, []);
+  }, [isAuthLoading]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    if (!isAuthLoading) {
+      if (isAuthenticated) {
+        fetchProjects();
+      } else {
+        setProjects([]);
+        setIsLoadingProjects(false);
+      }
+    }
+  }, [fetchProjects, isAuthLoading, isAuthenticated, authSession]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId) || null;
 
@@ -286,8 +316,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const supabase = getSupabaseClient();
     if (isSupabaseConfigured && supabase) {
       try {
+        const { data: { session: activeSession } } = await supabase.auth.getSession();
+        const userId = activeSession?.user?.id;
+
         const payload = {
           id: newProj.id,
+          user_id: userId || null,
           businessName: newProj.businessName,
           instagramUrl: newProj.instagramUrl,
           industry: newProj.industry,
