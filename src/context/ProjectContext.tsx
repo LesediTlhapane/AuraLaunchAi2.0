@@ -260,6 +260,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     industry: IndustryType;
     notes?: string;
   }): Promise<Project> => {
+    console.log('[createProject] Started with payload:', data);
+
     const cleanedHandle = data.instagramUrl.includes('instagram.com/')
       ? `@${data.instagramUrl.split('instagram.com/')[1].replace('/', '')}`
       : data.instagramUrl.startsWith('@')
@@ -270,164 +272,176 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? data.instagramUrl
       : `https://instagram.com/${cleanedHandle.replace('@', '')}`;
 
-    const newProjId = `proj_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const now = new Date().toISOString();
-
-    const newProj: Project = {
-      id: newProjId,
-      businessName: data.businessName,
-      instagramUrl: formattedUrl,
-      industry: data.industry,
-      status: 'completed',
-      createdAt: now,
-      updatedAt: now,
-      notes: data.notes || '',
-      mediaCount: 1,
-      readinessScore: 90,
-      businessInfo: {
-        businessName: data.businessName,
-        instagramHandle: cleanedHandle,
-        instagramUrl: formattedUrl,
-        industry: data.industry,
-        phone: '+1 (555) 234-5678',
-        email: `contact@${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-        address: '100 Innovation Way',
-        operatingHours: 'Mon-Fri: 9:00 AM – 6:00 PM',
-        bio: `${data.businessName} – Premier ${data.industry.toLowerCase()} brand extracted from Instagram. ✨`,
-        websiteUrl: `https://${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-        services: ['Primary Service', 'Specialty Offerings', 'Consultation'],
-        notes: data.notes,
-      },
-      branding: {
-        primaryColor: '#052b66',
-        secondaryColor: '#45cc42',
-        accentColor: '#E2B857',
-        backgroundColor: '#F8FAFC',
-        textColor: '#0F172A',
-        headingFont: 'Playfair Display',
-        bodyFont: 'Plus Jakarta Sans',
-        personality: {
-          professionalism: 85,
-          minimalism: 80,
-          vibrancy: 75,
-          luxury: 80,
-        },
-        logoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80',
-      },
-      generatedCopy: {
-        heroHeadline: `Official Digital Platform for ${data.businessName}`,
-        heroSubheadline: `Specialized ${data.industry.toLowerCase()} services and bespoke experiences.`,
-        aboutText: `Welcome to ${data.businessName}. We bring unmatched quality and expertise in ${data.industry.toLowerCase()}.`,
-        servicesIntro: 'Tailored solutions designed for excellence.',
-        servicesList: [
-          { title: 'Core Services', description: 'Comprehensive solutions tailored to your unique requirements.' },
-          { title: 'Advisory & Strategy', description: 'Expert guidance to accelerate growth and visibility.' },
-        ],
-        ctaHeadline: `Get Started with ${data.businessName}`,
-        ctaButtonText: 'Inquire Now',
-        faqs: [
-          { question: `How do I contact ${data.businessName}?`, answer: 'Reach out via our inquiry form or direct message.' },
-        ],
-        seoMeta: {
-          title: `${data.businessName} | Official Website`,
-          description: `Welcome to ${data.businessName}. Premier ${data.industry.toLowerCase()} services.`,
-          keywords: [data.businessName.toLowerCase(), data.industry.toLowerCase()],
-        },
-      },
-      media: [
-        {
-          id: `med_${Date.now()}`,
-          projectId: newProjId,
-          url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&auto=format&fit=crop&q=80',
-          caption: `${data.businessName} workspace and primary showcase.`,
-          category: 'Atmosphere',
-          qualityScore: 95,
-          isHeroCandidate: true,
-          aspectRatio: '1:1',
-          likesCount: 140,
-          commentsCount: 22,
-          extractedDate: now.split('T')[0],
-        },
-      ],
-      exports: {
-        id: `exp_${Date.now()}`,
-        projectId: newProjId,
-        loveablePrompt: `Create a landing page for ${data.businessName} (${data.industry}). Primary color #052b66, accent green #45cc42.`,
-        jsonExport: JSON.stringify({ businessName: data.businessName, industry: data.industry }, null, 2),
-        markdownExport: `# ${data.businessName}\nIndustry: ${data.industry}\nCreated: ${now}`,
-        createdAt: now,
-        downloadCount: 0,
-      },
-    };
-
     const supabase = getSupabaseClient();
     if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: { session: activeSession } } = await supabase.auth.getSession();
-        const userId = activeSession?.user?.id;
+      const { data: { session: activeSession } } = await supabase.auth.getSession();
+      const userId = activeSession?.user?.id;
 
-        // Insert ONLY the valid projects table columns per task constraints:
-        // user_id, name, target_instagram_url, status
-        const dbPayload = {
-          user_id: userId || null,
-          name: data.businessName,
-          target_instagram_url: formattedUrl,
-          status: 'completed',
-        };
+      // Insert ONLY the valid projects table columns: user_id, name, target_instagram_url, status
+      const dbPayload = {
+        user_id: userId || null,
+        name: data.businessName,
+        target_instagram_url: formattedUrl,
+        status: 'completed',
+      };
 
-        const { data: insertedData, error } = await supabase
-          .from('projects')
-          .insert([dbPayload])
-          .select('*');
+      console.log('[supabase.from("projects").insert] Executing insert with payload:', dbPayload);
+      const { data: insertedData, error } = await supabase
+        .from('projects')
+        .insert([dbPayload])
+        .select('*');
 
-        if (error) {
-          console.error('Supabase project insert error:', error.message);
-          addToast('error', 'Database Error', error.message || 'Failed to insert project into Supabase.');
-        } else {
-          addToast('success', 'Project Created', `${data.businessName} saved to Supabase projects table.`);
-          if (insertedData && insertedData[0]) {
-            newProj.id = String(insertedData[0].id);
-            if (insertedData[0].created_at) newProj.createdAt = insertedData[0].created_at;
-            if (insertedData[0].updated_at) newProj.updatedAt = insertedData[0].updated_at;
-          }
-        }
-        await fetchProjects();
-      } catch (e: any) {
-        console.error('Failed to insert into Supabase:', e);
-        addToast('error', 'Database Error', e.message || 'Failed to insert project into Supabase.');
-        setProjects((prev) => [newProj, ...prev]);
+      console.log('[supabase.from("projects").insert] Response:', { insertedData, error });
+
+      if (error) {
+        console.error('[createProject] Supabase insert failed with error:', error.message);
+        addToast('error', 'Database Error', error.message || 'Failed to insert project into Supabase.');
+        throw new Error(error.message || 'Failed to insert project into Supabase.');
       }
+
+      if (!insertedData || insertedData.length === 0) {
+        const msg = 'Supabase insert succeeded but returned no row data.';
+        console.error('[createProject]', msg);
+        addToast('error', 'Database Error', msg);
+        throw new Error(msg);
+      }
+
+      console.log('[createProject] Insert confirmed. Reloading projects directly from Supabase...');
+      const fetchResult = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (fetchResult.error) {
+        console.error('[createProject] Failed to reload projects from Supabase:', fetchResult.error.message);
+        addToast('error', 'Fetch Error', fetchResult.error.message);
+        throw new Error(fetchResult.error.message);
+      }
+
+      const freshProjects = (fetchResult.data || []).map(parseSupabaseRow);
+      console.log('[setProjects] Updating state with fresh projects list from Supabase:', freshProjects);
+      setProjects(freshProjects);
+
+      const newlyInsertedRow = insertedData[0];
+      const createdProjectId = String(newlyInsertedRow.id);
+      const createdProject = freshProjects.find((p) => p.id === createdProjectId) || parseSupabaseRow(newlyInsertedRow);
+
+      setActiveProjectId(createdProjectId);
+      addToast('success', 'Project Created', `${data.businessName} saved to Supabase projects table.`);
+
+      const newActivity: ActivityLog = {
+        id: `act_${Date.now()}`,
+        projectId: createdProjectId,
+        projectTitle: data.businessName,
+        action: 'Created new project and saved to Supabase',
+        timestamp: 'Just now',
+        user: 'You',
+        status: 'completed',
+      };
+      setActivityLogs((prev) => [newActivity, ...prev]);
+
+      const newNotif: NotificationItem = {
+        id: `notif_${Date.now()}`,
+        title: 'Project Initialized',
+        message: `${data.businessName} successfully created and saved in Supabase.`,
+        timestamp: 'Just now',
+        read: false,
+        type: 'success',
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+
+      console.log('[createProject] Finished successfully:', createdProject);
+      return createdProject;
     } else {
-      setProjects((prev) => [newProj, ...prev]);
-      addToast('success', 'Project Created', `${newProj.businessName} created locally.`);
+      console.warn('[createProject] Supabase is not configured. Falling back to local memory store.');
+      const now = new Date().toISOString();
+      const newProjId = `proj_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const fallbackProj: Project = {
+        id: newProjId,
+        businessName: data.businessName,
+        instagramUrl: formattedUrl,
+        industry: data.industry,
+        status: 'completed',
+        createdAt: now,
+        updatedAt: now,
+        notes: data.notes || '',
+        mediaCount: 1,
+        readinessScore: 90,
+        businessInfo: {
+          businessName: data.businessName,
+          instagramHandle: cleanedHandle,
+          instagramUrl: formattedUrl,
+          industry: data.industry,
+          phone: '+1 (555) 234-5678',
+          email: `contact@${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          address: '100 Innovation Way',
+          operatingHours: 'Mon-Fri: 9:00 AM – 6:00 PM',
+          bio: `${data.businessName} – Premier ${data.industry.toLowerCase()} brand extracted from Instagram. ✨`,
+          websiteUrl: `https://${data.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          services: ['Primary Service', 'Specialty Offerings', 'Consultation'],
+          notes: data.notes,
+        },
+        branding: {
+          primaryColor: '#052b66',
+          secondaryColor: '#45cc42',
+          accentColor: '#E2B857',
+          backgroundColor: '#F8FAFC',
+          textColor: '#0F172A',
+          headingFont: 'Playfair Display',
+          bodyFont: 'Plus Jakarta Sans',
+          personality: { professionalism: 85, minimalism: 80, vibrancy: 75, luxury: 80 },
+          logoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80',
+        },
+        generatedCopy: {
+          heroHeadline: `Official Digital Platform for ${data.businessName}`,
+          heroSubheadline: `Specialized ${data.industry.toLowerCase()} services and bespoke experiences.`,
+          aboutText: `Welcome to ${data.businessName}. We bring unmatched quality and expertise in ${data.industry.toLowerCase()}.`,
+          servicesIntro: 'Tailored solutions designed for excellence.',
+          servicesList: [
+            { title: 'Core Services', description: 'Comprehensive solutions tailored to your unique requirements.' },
+            { title: 'Advisory & Strategy', description: 'Expert guidance to accelerate growth and visibility.' },
+          ],
+          ctaHeadline: `Get Started with ${data.businessName}`,
+          ctaButtonText: 'Inquire Now',
+          faqs: [{ question: `How do I contact ${data.businessName}?`, answer: 'Reach out via our inquiry form or direct message.' }],
+          seoMeta: {
+            title: `${data.businessName} | Official Website`,
+            description: `Welcome to ${data.businessName}. Premier ${data.industry.toLowerCase()} services.`,
+            keywords: [data.businessName.toLowerCase(), data.industry.toLowerCase()],
+          },
+        },
+        media: [
+          {
+            id: `med_${Date.now()}`,
+            projectId: newProjId,
+            url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&auto=format&fit=crop&q=80',
+            caption: `${data.businessName} workspace and primary showcase.`,
+            category: 'Atmosphere',
+            qualityScore: 95,
+            isHeroCandidate: true,
+            aspectRatio: '1:1',
+            likesCount: 140,
+            commentsCount: 22,
+            extractedDate: now.split('T')[0],
+          },
+        ],
+        exports: {
+          id: `exp_${Date.now()}`,
+          projectId: newProjId,
+          loveablePrompt: `Create a landing page for ${data.businessName} (${data.industry}).`,
+          jsonExport: JSON.stringify({ businessName: data.businessName, industry: data.industry }, null, 2),
+          markdownExport: `# ${data.businessName}\nIndustry: ${data.industry}\nCreated: ${now}`,
+          createdAt: now,
+          downloadCount: 0,
+        },
+      };
+
+      console.log('[setProjects] Local fallback mode: setting projects state');
+      setProjects((prev) => [fallbackProj, ...prev]);
+      setActiveProjectId(fallbackProj.id);
+      addToast('success', 'Project Created', `${fallbackProj.businessName} created locally.`);
+      return fallbackProj;
     }
-
-    setActiveProjectId(newProj.id);
-
-    // Add activity log
-    const newActivity: ActivityLog = {
-      id: `act_${Date.now()}`,
-      projectId: newProj.id,
-      projectTitle: newProj.businessName,
-      action: 'Created new project and saved to Supabase',
-      timestamp: 'Just now',
-      user: 'You',
-      status: 'completed',
-    };
-    setActivityLogs((prev) => [newActivity, ...prev]);
-
-    // Add Notification
-    const newNotif: NotificationItem = {
-      id: `notif_${Date.now()}`,
-      title: 'Project Initialized',
-      message: `${newProj.businessName} successfully created and saved in Supabase.`,
-      timestamp: 'Just now',
-      read: false,
-      type: 'success',
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-
-    return newProj;
   };
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
