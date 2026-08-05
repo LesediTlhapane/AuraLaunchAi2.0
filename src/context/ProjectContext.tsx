@@ -50,10 +50,6 @@ function parseSupabaseRow(row: any): Project {
   let mappedStatus: ProjectStatus = 'completed';
   if (row.status === 'pending' || row.status === 'processing' || row.status === 'completed' || row.status === 'failed') {
     mappedStatus = row.status;
-  } else if (row.status === 'ready' || row.status === 'exported') {
-    mappedStatus = 'completed';
-  } else if (row.status === 'draft' || row.status === 'in_progress') {
-    mappedStatus = 'processing';
   }
 
   return {
@@ -424,7 +420,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newNotif: NotificationItem = {
       id: `notif_${Date.now()}`,
       title: 'Project Initialized',
-      message: `${newProj.businessName} successfully created and ready in Supabase.`,
+      message: `${newProj.businessName} successfully created and saved in Supabase.`,
       timestamp: 'Just now',
       read: false,
       type: 'success',
