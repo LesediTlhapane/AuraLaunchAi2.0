@@ -25,7 +25,7 @@ export const TabOverview: React.FC<TabOverviewProps> = ({ project, onNavigateTab
     { title: 'Brand Design Token Analysis', desc: 'Auto-extracted primary color & typography pairings', status: 'completed' },
     { title: 'Structured AI Copy Synthesis', desc: 'Hero headline, services breakdown & SEO metadata generated', status: 'completed' },
     { title: 'Website Template Assembly', desc: 'Responsive multi-section layout preview built', status: project.readinessScore >= 80 ? 'completed' : 'in_progress' },
-    { title: 'AI Export Packages', desc: 'Loveable, Framer & JSON prompts generated', status: project.status === 'exported' ? 'completed' : 'pending' },
+    { title: 'AI Export Packages', desc: 'Loveable, Framer & JSON prompts generated', status: project.status === 'completed' ? 'completed' : 'pending' },
   ];
 
   return (

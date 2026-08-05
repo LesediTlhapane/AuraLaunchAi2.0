@@ -157,7 +157,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="flex items-center gap-3 shrink-0">
                       <span
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                          p.status === 'ready' || p.status === 'exported'
+                          p.status === 'completed'
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                             : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
                         }`}

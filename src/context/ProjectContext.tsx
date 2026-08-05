@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Project, IndustryType, ActiveTab, NotificationItem, ActivityLog } from '../types';
+import { Project, IndustryType, ProjectStatus, ActiveTab, NotificationItem, ActivityLog } from '../types';
 import { initialNotifications, initialActivityLogs } from '../lib/mockData';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { useToast } from './ToastContext';
@@ -47,6 +47,15 @@ function parseSupabaseRow(row: any): Project {
   const instagramHandle = instagramUrl ? '@' + String(instagramUrl).split('/').filter(Boolean).pop() : '@business';
   const industry: IndustryType = (row.industry as IndustryType) || 'Hospitality & Dining';
 
+  let mappedStatus: ProjectStatus = 'completed';
+  if (row.status === 'pending' || row.status === 'processing' || row.status === 'completed' || row.status === 'failed') {
+    mappedStatus = row.status;
+  } else if (row.status === 'ready' || row.status === 'exported') {
+    mappedStatus = 'completed';
+  } else if (row.status === 'draft' || row.status === 'in_progress') {
+    mappedStatus = 'processing';
+  }
+
   return {
     id: String(row.id || `proj_${Date.now()}`),
     user_id: row.user_id || null,
@@ -55,7 +64,7 @@ function parseSupabaseRow(row: any): Project {
     businessName,
     instagramUrl,
     industry,
-    status: row.status || 'ready',
+    status: mappedStatus,
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     updatedAt: row.updated_at || row.updatedAt || new Date().toISOString(),
     notes: row.notes || '',
@@ -273,7 +282,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       businessName: data.businessName,
       instagramUrl: formattedUrl,
       industry: data.industry,
-      status: 'ready',
+      status: 'completed',
       createdAt: now,
       updatedAt: now,
       notes: data.notes || '',
@@ -367,7 +376,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           user_id: userId || null,
           name: data.businessName,
           target_instagram_url: formattedUrl,
-          status: 'ready',
+          status: 'completed',
         };
 
         const { data: insertedData, error } = await supabase
@@ -451,7 +460,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (updates.name !== undefined) updatePayload.name = updates.name;
         if (updates.instagramUrl !== undefined) updatePayload.target_instagram_url = updates.instagramUrl;
         if (updates.target_instagram_url !== undefined) updatePayload.target_instagram_url = updates.target_instagram_url;
-        if (updates.status !== undefined) updatePayload.status = updates.status;
+        if (updates.status !== undefined) {
+          let validStatus: ProjectStatus = 'completed';
+          if (updates.status === 'pending' || updates.status === 'processing' || updates.status === 'completed' || updates.status === 'failed') {
+            validStatus = updates.status;
+          }
+          updatePayload.status = validStatus;
+        }
 
         await supabase.from('projects').update(updatePayload).eq('id', id);
       } catch (err) {

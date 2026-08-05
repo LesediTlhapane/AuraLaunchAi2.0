@@ -107,10 +107,10 @@ export const ProjectsPage: React.FC = () => {
               className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200"
             >
               <option value="all">All Statuses</option>
-              <option value="ready">Ready</option>
-              <option value="in_progress">In Progress</option>
-              <option value="draft">Draft</option>
-              <option value="exported">Exported</option>
+              <option value="completed">Completed</option>
+              <option value="processing">Processing</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
             </select>
           </div>
 
@@ -214,7 +214,7 @@ export const ProjectsPage: React.FC = () => {
 
                   <span
                     className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 ${
-                      project.status === 'ready' || project.status === 'exported'
+                      project.status === 'completed'
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                         : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
                     }`}
@@ -300,7 +300,7 @@ export const ProjectsPage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <span
                         className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                          project.status === 'ready' || project.status === 'exported'
+                          project.status === 'completed'
                             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                             : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
                         }`}
