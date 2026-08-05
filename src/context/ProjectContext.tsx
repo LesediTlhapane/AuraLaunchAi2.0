@@ -4,6 +4,7 @@ import { initialNotifications, initialActivityLogs } from '../lib/mockData';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 import { useToast } from './ToastContext';
 import { useAuth } from './AuthContext';
+import { projectProcessingService } from '../services/projectProcessingService';
 
 interface ProjectContextType {
   projects: Project[];
@@ -48,7 +49,7 @@ function parseSupabaseRow(row: any): Project {
   const industry: IndustryType = (row.industry as IndustryType) || 'Hospitality & Dining';
 
   let mappedStatus: ProjectStatus = 'completed';
-  if (row.status === 'pending' || row.status === 'processing' || row.status === 'completed' || row.status === 'failed') {
+  if (row.status === 'pending' || row.status === 'researching' || row.status === 'generating' || row.status === 'processing' || row.status === 'completed' || row.status === 'failed') {
     mappedStatus = row.status;
   }
 
@@ -226,6 +227,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else {
           const loaded = (data || []).map(parseSupabaseRow);
           setProjects(loaded);
+
+          // Auto-resume processing pipeline for active in-progress projects
+          loaded.forEach((p) => {
+            if ((p.status === 'pending' || p.status === 'researching' || p.status === 'generating' || p.status === 'processing') && !projectProcessingService.isProcessing(p.id)) {
+              projectProcessingService.processProject(p.id, (id, newStatus) => {
+                setProjects((prev) =>
+                  prev.map((proj) => (proj.id === id ? { ...proj, status: newStatus, updatedAt: new Date().toISOString() } : proj))
+                );
+              });
+            }
+          });
         }
       } catch (err: any) {
         console.warn('Error fetching projects:', err);
@@ -282,7 +294,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         user_id: userId || null,
         name: data.businessName,
         target_instagram_url: formattedUrl,
-        status: 'completed',
+        status: 'pending',
       };
 
       console.log('[supabase.from("projects").insert] Executing insert with payload:', dbPayload);
@@ -327,16 +339,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const createdProject = freshProjects.find((p) => p.id === createdProjectId) || parseSupabaseRow(newlyInsertedRow);
 
       setActiveProjectId(createdProjectId);
-      addToast('success', 'Project Created', `${data.businessName} saved to Supabase projects table.`);
+      addToast('success', 'Project Created', `${data.businessName} initialized with pending status.`);
+
+      // Trigger asynchronous pipeline execution: pending -> researching -> generating -> completed
+      projectProcessingService.processProject(createdProjectId, (id, newStatus) => {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: newStatus, updatedAt: new Date().toISOString() } : p))
+        );
+      });
 
       const newActivity: ActivityLog = {
         id: `act_${Date.now()}`,
         projectId: createdProjectId,
         projectTitle: data.businessName,
-        action: 'Created new project and saved to Supabase',
+        action: 'Created new project and started AI processing pipeline',
         timestamp: 'Just now',
         user: 'You',
-        status: 'completed',
+        status: 'pending',
       };
       setActivityLogs((prev) => [newActivity, ...prev]);
 
@@ -388,7 +407,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (updates.target_instagram_url !== undefined) updatePayload.target_instagram_url = updates.target_instagram_url;
         if (updates.status !== undefined) {
           let validStatus: ProjectStatus = 'completed';
-          if (updates.status === 'pending' || updates.status === 'processing' || updates.status === 'completed' || updates.status === 'failed') {
+          if (updates.status === 'pending' || updates.status === 'researching' || updates.status === 'generating' || updates.status === 'processing' || updates.status === 'completed' || updates.status === 'failed') {
             validStatus = updates.status;
           }
           updatePayload.status = validStatus;

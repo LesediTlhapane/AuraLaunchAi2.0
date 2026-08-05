@@ -8,6 +8,7 @@ import { TabGeneratedCopy } from '../components/project-details/TabGeneratedCopy
 import { TabWebsitePreview } from '../components/project-details/TabWebsitePreview';
 import { TabExports } from '../components/project-details/TabExports';
 import { NotFoundPage } from './NotFoundPage';
+import { StatusBadge } from '../components/common/StatusBadge';
 import { 
   ArrowLeft, 
   LayoutDashboard, 
@@ -53,19 +54,11 @@ export const ProjectDetailsPage: React.FC = () => {
           </button>
 
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                 {activeProject.businessName}
               </h1>
-              <span
-                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                  activeProject.status === 'completed'
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                    : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
-                }`}
-              >
-                {activeProject.status}
-              </span>
+              <StatusBadge status={activeProject.status} size="md" />
             </div>
             <p className="text-xs text-slate-400">{activeProject.businessInfo.instagramHandle}</p>
           </div>

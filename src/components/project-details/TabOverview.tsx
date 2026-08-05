@@ -19,13 +19,42 @@ interface TabOverviewProps {
 }
 
 export const TabOverview: React.FC<TabOverviewProps> = ({ project, onNavigateTab }) => {
+  const isCompleted = project.status === 'completed';
+  const isGenerating = project.status === 'generating' || isCompleted;
+  const isResearching = project.status === 'researching' || isGenerating;
+  const isPending = project.status === 'pending';
+
   const pipelineSteps = [
-    { title: 'Instagram Profile Parsing', desc: 'Metadata, bio, and business contact extraction', status: 'completed' },
-    { title: 'Media Library Indexing', desc: `${project.media.length} image assets extracted with quality scoring`, status: 'completed' },
-    { title: 'Brand Design Token Analysis', desc: 'Auto-extracted primary color & typography pairings', status: 'completed' },
-    { title: 'Structured AI Copy Synthesis', desc: 'Hero headline, services breakdown & SEO metadata generated', status: 'completed' },
-    { title: 'Website Template Assembly', desc: 'Responsive multi-section layout preview built', status: project.readinessScore >= 80 ? 'completed' : 'in_progress' },
-    { title: 'AI Export Packages', desc: 'Loveable, Framer & JSON prompts generated', status: project.status === 'completed' ? 'completed' : 'pending' },
+    { 
+      title: 'Instagram Profile Parsing', 
+      desc: 'Metadata, bio, and business contact extraction', 
+      status: isResearching ? 'completed' : isPending ? 'in_progress' : 'pending' 
+    },
+    { 
+      title: 'Media Library Indexing', 
+      desc: `${project.media.length} image assets extracted with quality scoring`, 
+      status: isResearching ? 'completed' : 'pending' 
+    },
+    { 
+      title: 'Brand Design Token Analysis', 
+      desc: 'Auto-extracted primary color & typography pairings', 
+      status: isGenerating ? 'completed' : isResearching ? 'in_progress' : 'pending' 
+    },
+    { 
+      title: 'Structured AI Copy Synthesis', 
+      desc: 'Hero headline, services breakdown & SEO metadata generated', 
+      status: isGenerating ? 'completed' : 'pending' 
+    },
+    { 
+      title: 'Website Template Assembly', 
+      desc: 'Responsive multi-section layout preview built', 
+      status: isCompleted ? 'completed' : isGenerating ? 'in_progress' : 'pending' 
+    },
+    { 
+      title: 'AI Export Packages', 
+      desc: 'Loveable, Framer & JSON prompts generated', 
+      status: isCompleted ? 'completed' : 'pending' 
+    },
   ];
 
   return (

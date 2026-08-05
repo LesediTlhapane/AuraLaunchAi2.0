@@ -1,4 +1,4 @@
-export type ProjectStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ProjectStatus = 'pending' | 'researching' | 'generating' | 'processing' | 'completed' | 'failed';
 
 export type IndustryType = 
   | 'Hospitality & Dining'
